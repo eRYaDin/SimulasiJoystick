@@ -1,5 +1,6 @@
-let WIDTH = 350;
-let HEIGHT = 350;
+// Konstanta dan variabel global
+const WIDTH = 350;
+const HEIGHT = 350;
 const RADIUS = 120;
 const KNOB_SIZE = 25;
 const MAX_OUTPUT = 1600;
@@ -12,31 +13,50 @@ let hallData = [];
 let tmrData = [];
 let analogData = [];
 
-// Function to calculate average noise
+// Mini game variables
+let carX = 400;
+let carY = 300;
+let carSpeed = 5;
+let coins = [];
+let score = 0;
+let gameRunning = false;
+const gameCanvas = document.getElementById('game-canvas');
+const gameCtx = gameCanvas.getContext('2d');
+
+// Mini joystick variables
+const miniWIDTH = 150;
+const miniHEIGHT = 150;
+const miniRADIUS = 50;
+const miniKNOB_SIZE = 15;
+const miniMAX_OUTPUT = 1600;
+
+// Fungsi utilitas
 function calculateAvgNoise(data, target) {
     if (data.length === 0) return 0;
     const deviations = data.map(val => Math.abs(val - target));
     return Math.round(deviations.reduce((a, b) => a + b, 0) / deviations.length);
 }
 
-// Function to calculate accuracy (inverse of noise, scaled)
 function calculateAccuracy(avgNoise) {
     return Math.max(0, Math.round(100 - (avgNoise / 16)));
 }
 
-// Function to create joystick
-function createJoystick(canvasId, labelId, onMove, type) {
+// Fungsi untuk membuat joystick (dioptimalkan dengan parameter isMini)
+function createJoystick(canvasId, labelId, onMove, type, isMini = false) {
     const canvas = document.getElementById(canvasId);
     const ctx = canvas.getContext('2d');
-    const centerX = WIDTH / 2;
-    const centerY = HEIGHT / 2;
+    const centerX = (isMini ? miniWIDTH : WIDTH) / 2;
+    const centerY = (isMini ? miniHEIGHT : HEIGHT) / 2;
     let knobX = centerX;
     let knobY = centerY;
     let isDragging = false;
+    const radius = isMini ? miniRADIUS : RADIUS;
+    const knobSize = isMini ? miniKNOB_SIZE : KNOB_SIZE;
+    const maxOutput = isMini ? miniMAX_OUTPUT : MAX_OUTPUT;
 
     function drawOuterCircle() {
         ctx.beginPath();
-        ctx.arc(centerX, centerY, RADIUS, 0, 2 * Math.PI);
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
         ctx.strokeStyle = 'black';
         ctx.lineWidth = 2;
         ctx.stroke();
@@ -44,53 +64,41 @@ function createJoystick(canvasId, labelId, onMove, type) {
 
     function drawKnob() {
         ctx.beginPath();
-        ctx.arc(knobX, knobY, KNOB_SIZE, 0, 2 * Math.PI);
+        ctx.arc(knobX, knobY, knobSize, 0, 2 * Math.PI);
         ctx.fillStyle = 'red';
         ctx.fill();
     }
 
     function redraw() {
-        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        ctx.clearRect(0, 0, isMini ? miniWIDTH : WIDTH, isMini ? miniHEIGHT : HEIGHT);
         drawOuterCircle();
         drawKnob();
     }
 
     redraw();
 
-    canvas.addEventListener('mousedown', (e) => {
+    // Event listeners (dioptimalkan dengan fungsi handler)
+    const handleStart = (e) => {
         isDragging = true;
-        moveKnob(e);
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
+        moveKnob(e.touches ? e.touches[0] : e);
+    };
+    const handleMove = (e) => {
         if (isDragging) {
-            moveKnob(e);
+            e.preventDefault();
+            moveKnob(e.touches ? e.touches[0] : e);
         }
-    });
-
-    canvas.addEventListener('mouseup', () => {
+    };
+    const handleEnd = () => {
         isDragging = false;
         smoothCenter();
-    });
+    };
 
-    // Touch events for mobile
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true;
-        moveKnob(e.touches[0]);
-    });
-
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (isDragging) {
-            moveKnob(e.touches[0]);
-        }
-    });
-
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
-        smoothCenter();
-    });
+    canvas.addEventListener('mousedown', handleStart);
+    canvas.addEventListener('mousemove', handleMove);
+    canvas.addEventListener('mouseup', handleEnd);
+    canvas.addEventListener('touchstart', handleStart);
+    canvas.addEventListener('touchmove', handleMove);
+    canvas.addEventListener('touchend', handleEnd);
 
     function moveKnob(e) {
         const rect = canvas.getBoundingClientRect();
@@ -101,8 +109,8 @@ function createJoystick(canvasId, labelId, onMove, type) {
         let dy = mouseY - centerY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        if (dist > RADIUS) {
-            const scale = RADIUS / dist;
+        if (dist > radius) {
+            const scale = radius / dist;
             dx *= scale;
             dy *= scale;
         }
@@ -112,8 +120,8 @@ function createJoystick(canvasId, labelId, onMove, type) {
 
         redraw();
 
-        let normX = Math.round((dx / RADIUS) * MAX_OUTPUT);
-        let normY = Math.round((dy / RADIUS) * MAX_OUTPUT);
+        let normX = Math.round((dx / radius) * maxOutput);
+        let normY = Math.round((dy / radius) * maxOutput);
 
         // Apply deadzone for analog
         if (type === 'analog' && Math.abs(normX) < DEADZONE) normX = 0;
@@ -143,7 +151,7 @@ function createJoystick(canvasId, labelId, onMove, type) {
     }
 }
 
-// Function to create graph with zoom (line chart without points, thicker lines)
+// Fungsi untuk membuat graph (tetap sama, sudah efisien)
 function createGraph(canvasId, datasets) {
     const graphCanvas = document.getElementById(canvasId);
     const chart = new Chart(graphCanvas, {
@@ -157,10 +165,10 @@ function createGraph(canvasId, datasets) {
             maintainAspectRatio: false,
             elements: {
                 point: {
-                    radius: 0  // No points/dots on the graph
+                    radius: 0
                 },
                 line: {
-                    borderWidth: 2  // Thicker lines for better visibility
+                    borderWidth: 2
                 }
             },
             scales: {
@@ -226,22 +234,7 @@ function createGraph(canvasId, datasets) {
     };
 }
 
-// Mode toggle logic
-document.getElementById('desktop-mode').addEventListener('click', () => {
-    document.body.classList.remove('mobile-mode');
-    document.getElementById('desktop-mode').classList.add('active');
-    document.getElementById('mobile-mode').classList.remove('active');
-    WIDTH = 350; HEIGHT = 350;
-});
-
-document.getElementById('mobile-mode').addEventListener('click', () => {
-    document.body.classList.add('mobile-mode');
-    document.getElementById('mobile-mode').classList.add('active');
-    document.getElementById('desktop-mode').classList.remove('active');
-    WIDTH = 300; HEIGHT = 300;
-});
-
-// Hall Joystick (1) - Lower noise, no drift, no auto-movement
+// Inisialisasi joystick utama dan graph
 const updateGraph1 = createGraph('graph-canvas1', [{
     label: 'Hall X',
     data: [],
@@ -260,7 +253,6 @@ createJoystick('joystick-canvas1', 'label-hall', (normX, normY, type) => {
     updateGraph1([hallX]);
 }, 'hall');
 
-// TMR Joystick (2) - Low noise + jitter
 const updateGraph2 = createGraph('graph-canvas2', [{
     label: 'TMR X',
     data: [],
@@ -280,7 +272,6 @@ createJoystick('joystick-canvas2', 'label-tmr', (normX, normY, type) => {
     updateGraph2([tmrX]);
 }, 'tmr');
 
-// Analog Joystick (3) - Added noise + deadzone
 const updateGraph3 = createGraph('graph-canvas3', [{
     label: 'Analog X',
     data: [],
@@ -299,35 +290,165 @@ createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
     updateGraph3([analogX]);
 }, 'analog');
 
-// Comparison Joystick (4) - Controls all graphs
 const updateGraph4 = createGraph('graph-canvas4', [
     { label: 'Hall X', data: [], borderColor: 'blue', fill: false, borderWidth: 2 },
     { label: 'TMR X', data: [], borderColor: 'green', fill: false, borderWidth: 2 },
     { label: 'Analog X', data: [], borderColor: 'orange', fill: false, borderWidth: 2 }
 ]);
-createJoystick('joystick-canvas4', null, (normX, normY, type) => {
+createJoystick('joystick-canvas4', 'label-comp-hall', (normX, normY, type) => {
     const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
+    document.getElementById('label-comp-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
+    hallData.push(hallX);
+    if (hallData.length > 100) hallData.shift();
+    const hallAvgNoise = calculateAvgNoise(hallData, normX);
+
     const jitter = Math.sin(Date.now() / 100) * 5;
     const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
-    let analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
-    if (Math.abs(analogX) < DEADZONE) analogX = 0;
-
-    document.getElementById('label-comp-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
     document.getElementById('label-comp-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
-    document.getElementById('label-comp-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
-
-    hallData.push(hallX);
     tmrData.push(tmrX);
+    if (tmrData.length > 100) tmrData.shift();
+    const tmrAvgNoise = calculateAvgNoise(tmrData, normX);
+
+    let analogNormX = normX;
+    if (Math.abs(analogNormX) < DEADZONE) analogNormX = 0;
+    const analogX = analogNormX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
+    document.getElementById('label-comp-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
     analogData.push(analogX);
-    [hallData, tmrData, analogData].forEach(arr => { if (arr.length > 100) arr.shift(); });
+    if (analogData.length > 100) analogData.shift();
+    const analogAvgNoise = calculateAvgNoise(analogData, analogNormX);
 
-    const hallAvg = calculateAvgNoise(hallData, normX);
-    const tmrAvg = calculateAvgNoise(tmrData, normX);
-    const analogAvg = calculateAvgNoise(analogData, normX);
-    document.getElementById('stats-comp').textContent = `Hall Noise: ${hallAvg} | TMR Noise: ${tmrAvg} | Analog Noise: ${analogAvg}`;
-
+    document.getElementById('stats-comp').textContent = `Hall Noise: ${hallAvgNoise} | TMR Noise: ${tmrAvgNoise} | Analog Noise: ${analogAvgNoise}`;
     updateGraph4([hallX, tmrX, analogX]);
-    updateGraph1([hallX]);
-    updateGraph2([tmrX]);
-    updateGraph3([analogX]);
-}, 'comp');
+
+    if (gameRunning) {
+        carX += (normX / MAX_OUTPUT) * carSpeed;
+        carY += (normY / MAX_OUTPUT) * carSpeed;
+        carX = Math.max(20, Math.min(780, carX));
+        carY = Math.max(20, Math.min(580, carY));
+    }
+}, 'comparison');
+
+// Inisialisasi mini joysticks untuk mini game
+createJoystick('mini-joystick1', null, (normX, normY, type) => {
+    if (gameRunning) {
+        carX += (normX / miniMAX_OUTPUT) * carSpeed;
+        carY += (normY / miniMAX_OUTPUT) * carSpeed;
+        carX = Math.max(20, Math.min(780, carX));
+        carY = Math.max(20, Math.min(580, carY));
+    }
+}, 'hall', true);
+
+createJoystick('mini-joystick2', null, (normX, normY, type) => {
+    if (gameRunning) {
+        carX += (normX / miniMAX_OUTPUT) * carSpeed;
+        carY += (normY / miniMAX_OUTPUT) * carSpeed;
+        carX = Math.max(20, Math.min(780, carX));
+        carY = Math.max(20, Math.min(580, carY));
+    }
+}, 'tmr', true);
+
+createJoystick('mini-joystick3', null, (normX, normY, type) => {
+    if (gameRunning) {
+        let analogNormX = normX;
+        let analogNormY = normY;
+        if (Math.abs(analogNormX) < DEADZONE) analogNormX = 0;
+        if (Math.abs(analogNormY) < DEADZONE) analogNormY = 0;
+        carX += (analogNormX / miniMAX_OUTPUT) * carSpeed;
+        carY += (analogNormY / miniMAX_OUTPUT) * carSpeed;
+        carX = Math.max(20, Math.min(780, carX));
+        carY = Math.max(20, Math.min(580, carY));
+    }
+}, 'analog', true);
+
+createJoystick('mini-joystick4', null, (normX, normY, type) => {
+    if (gameRunning) {
+        carX += (normX / miniMAX_OUTPUT) * carSpeed;
+        carY += (normY / miniMAX_OUTPUT) * carSpeed;
+        carX = Math.max(20, Math.min(780, carX));
+        carY = Math.max(20, Math.min(580, carY));
+    }
+}, 'comparison', true);
+
+// Menu navigation
+document.getElementById('desktop-mode-start').addEventListener('click', () => {
+    document.getElementById('start-menu').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'block';
+});
+
+document.getElementById('mobile-mode-start').addEventListener('click', () => {
+    document.getElementById('start-menu').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'block';
+    document.body.classList.add('mobile-mode');
+});
+
+document.getElementById('mini-game-btn').addEventListener('click', () => {
+    document.getElementById('main-menu').style.display = 'none';
+    document.getElementById('mini-game').style.display = 'block';
+    startMiniGame();
+});
+
+document.getElementById('back-to-main').addEventListener('click', () => {
+    document.getElementById('mini-game').style.display = 'none';
+    document.getElementById('main-menu').style.display = 'block';
+    stopMiniGame();
+});
+
+// Mini game functions
+function startMiniGame() {
+    gameRunning = true;
+    score = 0;
+    carX = 400;
+    carY = 300;
+    coins = [];
+    spawnCoins();
+    gameLoop();
+}
+
+function stopMiniGame() {
+    gameRunning = false;
+}
+
+function spawnCoins() {
+    for (let i = 0; i < 5; i++) {
+        coins.push({
+            x: Math.random() * 760 + 20,
+            y: Math.random() * 560 + 20,
+            radius: 10
+        });
+    }
+}
+
+function gameLoop() {
+    if (!gameRunning) return;
+
+    gameCtx.clearRect(0, 0, 800, 600);
+
+    // Draw car
+    gameCtx.fillStyle = 'blue';
+    gameCtx.fillRect(carX - 15, carY - 15, 30, 30);
+
+    // Draw coins and check collision
+    gameCtx.fillStyle = 'gold';
+    coins.forEach((coin, index) => {
+        gameCtx.beginPath();
+        gameCtx.arc(coin.x, coin.y, coin.radius, 0, 2 * Math.PI);
+        gameCtx.fill();
+
+        const dx = carX - coin.x;
+        const dy = carY - coin.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < 15 + coin.radius) {
+            coins.splice(index, 1);
+            score += 10;
+            coins.push({
+                x: Math.random() * 760 + 20,
+                y: Math.random() * 560 + 20,
+                radius: 10
+            });
+        }
+    });
+
+    document.getElementById('game-stats').textContent = `Score: ${score} | Koin: ${coins.length}`;
+
+    requestAnimationFrame(gameLoop);
+}
