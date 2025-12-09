@@ -1,333 +1,118 @@
-let WIDTH = 350;
-let HEIGHT = 350;
-const RADIUS = 120;
-const KNOB_SIZE = 25;
-const MAX_OUTPUT = 1600;
-const HALL_NOISE = 50;
-const TMR_NOISE = 10;
-const DEADZONE = 100;
-const ANALOG_NOISE = 50;
-
-let hallData = [];
-let tmrData = [];
-let analogData = [];
-
-// Function to calculate average noise
-function calculateAvgNoise(data, target) {
-    if (data.length === 0) return 0;
-    const deviations = data.map(val => Math.abs(val - target));
-    return Math.round(deviations.reduce((a, b) => a + b, 0) / deviations.length);
+body {
+    font-family: 'Roboto', Arial, sans-serif;
+    background-color: #f5f5f5;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 20px;
+    margin: 0;
+    transition: all 0.3s ease;
+    color: #333;
 }
-
-// Function to calculate accuracy (inverse of noise, scaled)
-function calculateAccuracy(avgNoise) {
-    return Math.max(0, Math.round(100 - (avgNoise / 16)));
+h1 {
+    width: 100%;
+    text-align: center;
+    font-size: 2.5em;
+    margin-bottom: 20px;
+    color: #007bff;
 }
-
-// Function to create joystick
-function createJoystick(canvasId, labelId, onMove, type) {
-    const canvas = document.getElementById(canvasId);
-    const ctx = canvas.getContext('2d');
-    const centerX = WIDTH / 2;
-    const centerY = HEIGHT / 2;
-    let knobX = centerX;
-    let knobY = centerY;
-    let isDragging = false;
-
-    function drawOuterCircle() {
-        ctx.beginPath();
-        ctx.arc(centerX, centerY, RADIUS, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-    }
-
-    function drawKnob() {
-        ctx.beginPath();
-        ctx.arc(knobX, knobY, KNOB_SIZE, 0, 2 * Math.PI);
-        ctx.fillStyle = 'red';
-        ctx.fill();
-    }
-
-    function redraw() {
-        ctx.clearRect(0, 0, WIDTH, HEIGHT);
-        drawOuterCircle();
-        drawKnob();
-    }
-
-    redraw();
-
-    canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        moveKnob(e);
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-        if (isDragging) {
-            moveKnob(e);
-        }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-        isDragging = false;
-        smoothCenter();
-    });
-
-    // Touch events for mobile
-    canvas.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        isDragging = true;
-        moveKnob(e.touches[0]);
-    });
-
-    canvas.addEventListener('touchmove', (e) => {
-        e.preventDefault();
-        if (isDragging) {
-            moveKnob(e.touches[0]);
-        }
-    });
-
-    canvas.addEventListener('touchend', () => {
-        isDragging = false;
-        smoothCenter();
-    });
-
-    function moveKnob(e) {
-        const rect = canvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        let dx = mouseX - centerX;
-        let dy = mouseY - centerY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (dist > RADIUS) {
-            const scale = RADIUS / dist;
-            dx *= scale;
-            dy *= scale;
-        }
-
-        knobX = centerX + dx;
-        knobY = centerY + dy;
-
-        redraw();
-
-        let normX = Math.round((dx / RADIUS) * MAX_OUTPUT);
-        let normY = Math.round((dy / RADIUS) * MAX_OUTPUT);
-
-        // Apply deadzone for analog
-        if (type === 'analog' && Math.abs(normX) < DEADZONE) normX = 0;
-        if (type === 'analog' && Math.abs(normY) < DEADZONE) normY = 0;
-
-        onMove(normX, normY, type);
-    }
-
-    function smoothCenter() {
-        if (isDragging) return;
-
-        const dx = centerX - knobX;
-        const dy = centerY - knobY;
-
-        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
-            knobX = centerX;
-            knobY = centerY;
-            redraw();
-            return;
-        }
-
-        knobX += dx * 0.2;
-        knobY += dy * 0.2;
-
-        redraw();
-        setTimeout(smoothCenter, 10);
+#mode-toggle {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 30px;
+}
+#mode-toggle button {
+    padding: 12px 24px;
+    margin: 0 15px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    background-color: #fff;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    color: #007bff;
+    transition: all 0.3s ease;
+}
+#mode-toggle button:hover {
+    background-color: #007bff;
+    color: white;
+}
+#mode-toggle button.active {
+    background-color: #007bff;
+    color: white;
+}
+.section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 15px;
+    width: calc(50% - 30px);
+    min-width: 320px;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: box-shadow 0.3s ease;
+}
+.section:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+@media (max-width: 768px) {
+    .section {
+        width: 100%;
     }
 }
-
-// Function to create graph with zoom (line chart without points, thicker lines)
-function createGraph(canvasId, datasets) {
-    const graphCanvas = document.getElementById(canvasId);
-    const chart = new Chart(graphCanvas, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            elements: {
-                point: {
-                    radius: 0  // No points/dots on the graph
-                },
-                line: {
-                    borderWidth: 2  // Thicker lines for better visibility
-                }
-            },
-            scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    grid: {
-                        display: true,
-                        color: 'rgba(0,0,0,0.1)'
-                    }
-                },
-                y: {
-                    min: -1600,
-                    max: 1600,
-                    grid: {
-                        display: true,
-                        color: 'rgba(0,0,0,0.1)'
-                    }
-                }
-            },
-            plugins: {
-                tooltip: {
-                    enabled: true,
-                    mode: 'index',
-                    intersect: false
-                },
-                zoom: {
-                    zoom: {
-                        wheel: {
-                            enabled: true,
-                        },
-                        pinch: {
-                            enabled: true
-                        },
-                        mode: 'xy',
-                    },
-                    pan: {
-                        enabled: true,
-                        mode: 'xy',
-                    },
-                }
-            },
-            backgroundColor: 'white'
-        }
-    });
-
-    let timeStep = 0;
-    const maxDataPoints = 200;
-
-    return function updateGraph(values) {
-        timeStep++;
-        chart.data.labels.push(timeStep);
-        datasets.forEach((dataset, index) => {
-            dataset.data.push(values[index]);
-        });
-
-        if (chart.data.labels.length > maxDataPoints) {
-            chart.data.labels.shift();
-            datasets.forEach(dataset => dataset.data.shift());
-        }
-
-        chart.update();
-    };
+/* Mobile Mode Styles */
+.mobile-mode .section {
+    width: 100%;
+    margin: 10px;
+    padding: 15px;
 }
-
-// Mode toggle logic
-document.getElementById('desktop-mode').addEventListener('click', () => {
-    document.body.classList.remove('mobile-mode');
-    document.getElementById('desktop-mode').classList.add('active');
-    document.getElementById('mobile-mode').classList.remove('active');
-    WIDTH = 350; HEIGHT = 350;
-});
-
-document.getElementById('mobile-mode').addEventListener('click', () => {
-    document.body.classList.add('mobile-mode');
-    document.getElementById('mobile-mode').classList.add('active');
-    document.getElementById('desktop-mode').classList.remove('active');
-    WIDTH = 300; HEIGHT = 300;
-});
-
-// Hall Joystick (1) - Lower noise, no drift, no auto-movement
-const updateGraph1 = createGraph('graph-canvas1', [{
-    label: 'Hall X',
-    data: [],
-    borderColor: 'blue',
-    fill: false,
-    borderWidth: 2
-}]);
-createJoystick('joystick-canvas1', 'label-hall', (normX, normY, type) => {
-    const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
-    document.getElementById('label-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
-    hallData.push(hallX);
-    if (hallData.length > 100) hallData.shift();
-    const avgNoise = calculateAvgNoise(hallData, normX);
-    const accuracy = calculateAccuracy(avgNoise);
-    document.getElementById('stats-hall').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
-    updateGraph1([hallX]);
-}, 'hall');
-
-// TMR Joystick (2) - Low noise + jitter
-const updateGraph2 = createGraph('graph-canvas2', [{
-    label: 'TMR X',
-    data: [],
-    borderColor: 'green',
-    fill: false,
-    borderWidth: 2
-}]);
-createJoystick('joystick-canvas2', 'label-tmr', (normX, normY, type) => {
-    const jitter = Math.sin(Date.now() / 100) * 5;
-    const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
-    document.getElementById('label-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
-    tmrData.push(tmrX);
-    if (tmrData.length > 100) tmrData.shift();
-    const avgNoise = calculateAvgNoise(tmrData, normX);
-    const accuracy = calculateAccuracy(avgNoise);
-    document.getElementById('stats-tmr').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
-    updateGraph2([tmrX]);
-}, 'tmr');
-
-// Analog Joystick (3) - Added noise + deadzone
-const updateGraph3 = createGraph('graph-canvas3', [{
-    label: 'Analog X',
-    data: [],
-    borderColor: 'orange',
-    fill: false,
-    borderWidth: 2
-}]);
-createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
-    const analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
-    document.getElementById('label-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
-    analogData.push(analogX);
-    if (analogData.length > 100) analogData.shift();
-    const avgNoise = calculateAvgNoise(analogData, normX);
-    const accuracy = calculateAccuracy(avgNoise);
-    document.getElementById('stats-analog').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
-    updateGraph3([analogX]);
-}, 'analog');
-
-// Comparison Joystick (4) - Controls all graphs
-const updateGraph4 = createGraph('graph-canvas4', [
-    { label: 'Hall X', data: [], borderColor: 'blue', fill: false, borderWidth: 2 },
-    { label: 'TMR X', data: [], borderColor: 'green', fill: false, borderWidth: 2 },
-    { label: 'Analog X', data: [], borderColor: 'orange', fill: false, borderWidth: 2 }
-]);
-createJoystick('joystick-canvas4', null, (normX, normY, type) => {
-    const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
-    const jitter = Math.sin(Date.now() / 100) * 5;
-    const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
-    let analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
-    if (Math.abs(analogX) < DEADZONE) analogX = 0;
-
-    document.getElementById('label-comp-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
-    document.getElementById('label-comp-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
-    document.getElementById('label-comp-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
-
-    hallData.push(hallX);
-    tmrData.push(tmrX);
-    analogData.push(analogX);
-    [hallData, tmrData, analogData].forEach(arr => { if (arr.length > 100) arr.shift(); });
-
-    const hallAvg = calculateAvgNoise(hallData, normX);
-    const tmrAvg = calculateAvgNoise(tmrData, normX);
-    const analogAvg = calculateAvgNoise(analogData, normX);
-    document.getElementById('stats-comp').textContent = `Hall Noise: ${hallAvg} | TMR Noise: ${tmrAvg} | Analog Noise: ${analogAvg}`;
-
-    updateGraph4([hallX, tmrX, analogX]);
-    updateGraph1([hallX]);
-    updateGraph2([tmrX]);
-    updateGraph3([analogX]);
-}, 'comp');
+.mobile-mode #joystick-canvas1, .mobile-mode #joystick-canvas2, .mobile-mode #joystick-canvas3, .mobile-mode #joystick-canvas4 {
+    width: 300px !important;
+    height: 300px !important;
+}
+.mobile-mode .graph-container {
+    width: 100%;
+    max-width: 300px;
+    height: 250px;
+}
+.mobile-mode h3 {
+    font-size: 20px;
+}
+.mobile-mode .labels, .mobile-mode .stats {
+    font-size: 16px;
+}
+#joystick-canvas1, #joystick-canvas2, #joystick-canvas3, #joystick-canvas4 {
+    border: 2px solid #ddd;
+    background-color: white;
+    margin-bottom: 15px;
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+}
+.labels {
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 500;
+}
+.stats {
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    font-weight: 400;
+}
+.graph-container {
+    width: 100%;
+    max-width: 400px;
+    height: 300px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+}
+canvas {
+    max-width: 100%;
+    height: auto;
+}
