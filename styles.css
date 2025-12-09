@@ -9,19 +9,20 @@ body {
     transition: all 0.3s ease;
     color: #333;
 }
-h1 {
+#start-menu, #main-menu, #mini-game {
     width: 100%;
     text-align: center;
+}
+#start-menu h1, #main-menu h1, #mini-game h1 {
     font-size: 2.5em;
     margin-bottom: 20px;
     color: #007bff;
 }
-#mode-toggle {
-    width: 100%;
-    text-align: center;
+#start-menu p {
+    font-size: 1.2em;
     margin-bottom: 30px;
 }
-#mode-toggle button {
+#start-menu button, #mini-game-btn, #back-to-main {
     padding: 12px 24px;
     margin: 0 15px;
     font-size: 16px;
@@ -33,11 +34,7 @@ h1 {
     color: #007bff;
     transition: all 0.3s ease;
 }
-#mode-toggle button:hover {
-    background-color: #007bff;
-    color: white;
-}
-#mode-toggle button.active {
+#start-menu button:hover, #mini-game-btn:hover, #back-to-main:hover {
     background-color: #007bff;
     color: white;
 }
@@ -115,4 +112,51 @@ h1 {
 canvas {
     max-width: 100%;
     height: auto;
+}
+#game-canvas {
+    border: 2px solid #ddd;
+    background-color: #f0f0f0;
+    margin-top: 20px;
+}
+#game-stats {
+    font-size: 18px;
+    margin-top: 10px;
+    color: #007bff;
+}
+/* Mini joysticks */
+.mini-joysticks {
+    display: flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+.mini-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+}
+.mini-section h4 {
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #007bff;
+}
+#mini-joystick1, #mini-joystick2, #mini-joystick3, #mini-joystick4 {
+    border: 1px solid #ddd;
+    background-color: white;
+    border-radius: 8px;
+    max-width: 100%;
+    height: auto;
+}
+@media (max-width: 768px) {
+    .mini-joysticks {
+        justify-content: center;
+    }
+    .mini-section {
+        margin: 5px;
+    }
+    #mini-joystick1, #mini-joystick2, #mini-joystick3, #mini-joystick4 {
+        width: 120px !important;
+        height: 120px !important;
+    }
 }
