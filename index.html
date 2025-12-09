@@ -1,48 +1,73 @@
-body {
-    font-family: Arial, sans-serif;
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    padding: 10px;
-    margin: 0;
-}
-.section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 10px;
-    width: calc(50% - 20px);
-    min-width: 300px;
-}
-@media (max-width: 768px) {
-    .section {
-        width: 100%;
-    }
-}
-#joystick-canvas1, #joystick-canvas2, #joystick-canvas3, #joystick-canvas4 {
-    border: 1px solid black;
-    background-color: white;
-    margin-bottom: 10px;
-    max-width: 100%;
-    height: auto;
-}
-.labels {
-    margin-bottom: 10px;
-    text-align: center;
-    font-size: 14px;
-}
-.stats {
-    margin-bottom: 10px;
-    text-align: center;
-    font-size: 12px;
-    color: gray;
-}
-.graph-container {
-    width: 100%;
-    max-width: 400px;
-    height: 300px;
-}
-canvas {
-    max-width: 100%;
-    height: auto;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4 Joysticks + Graphs Comparison - Enhanced Differences</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.2.1"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="section">
+        <h3>Hall Joystick (High Noise + Drift)</h3>
+        <canvas id="joystick-canvas1" width="350" height="350"></canvas>
+        <div class="labels">
+            <div id="label-hall">Hall: X=0  Y=0</div>
+        </div>
+        <div class="stats">
+            <div id="stats-hall">Avg Noise: 0 | Accuracy: 100%</div>
+        </div>
+        <div class="graph-container">
+            <canvas id="graph-canvas1"></canvas>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>TMR Joystick (Low Noise + Jitter)</h3>
+        <canvas id="joystick-canvas2" width="350" height="350"></canvas>
+        <div class="labels">
+            <div id="label-tmr">TMR: X=0  Y=0</div>
+        </div>
+        <div class="stats">
+            <div id="stats-tmr">Avg Noise: 0 | Accuracy: 100%</div>
+        </div>
+        <div class="graph-container">
+            <canvas id="graph-canvas2"></canvas>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Analog Joystick (No Noise + Deadzone)</h3>
+        <canvas id="joystick-canvas3" width="350" height="350"></canvas>
+        <div class="labels">
+            <div id="label-analog">Analog: X=0  Y=0</div>
+        </div>
+        <div class="stats">
+            <div id="stats-analog">Avg Noise: 0 | Accuracy: 100%</div>
+        </div>
+        <div class="graph-container">
+            <canvas id="graph-canvas3"></canvas>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>Comparison Joystick (Controls All)</h3>
+        <canvas id="joystick-canvas4" width="350" height="350"></canvas>
+        <div class="labels">
+            <div id="label-comp-hall">Hall: X=0  Y=0</div>
+            <div id="label-comp-tmr">TMR: X=0  Y=0</div>
+            <div id="label-comp-analog">Analog: X=0  Y=0</div>
+        </div>
+        <div class="stats">
+            <div id="stats-comp">Hall Noise: 0 | TMR Noise: 0 | Analog Noise: 0</div>
+        </div>
+        <div class="graph-container">
+            <canvas id="graph-canvas4"></canvas>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
