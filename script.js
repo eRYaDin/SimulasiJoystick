@@ -3,9 +3,10 @@ let HEIGHT = 350;
 const RADIUS = 120;
 const KNOB_SIZE = 25;
 const MAX_OUTPUT = 1600;
-const HALL_NOISE = 150;  // Increased for worse performance
+const HALL_NOISE = 50;   // Reduced for better performance
 const TMR_NOISE = 10;    // Lower for smoother
-const DEADZONE = 100;    // Increased for worse analog performance
+const DEADZONE = 100;    // For analog
+const ANALOG_NOISE = 50; // Added noise to make analog worse
 
 let hallData = [];
 let tmrData = [];
@@ -32,8 +33,7 @@ function createJoystick(canvasId, labelId, onMove, type) {
     let knobX = centerX;
     let knobY = centerY;
     let isDragging = false;
-    let driftX = 0;  // For Hall's small drift during drag
-    let driftY = 0;
+    // Removed driftX and driftY - Hall now behaves cleanly like others
 
     function drawOuterCircle() {
         ctx.beginPath();
@@ -108,16 +108,6 @@ function createJoystick(canvasId, labelId, onMove, type) {
             dy *= scale;
         }
 
-        // Add small drift for Hall during drag to make it worse
-        if (type === 'hall') {
-            driftX += (Math.random() - 0.5) * 20;
-            driftY += (Math.random() - 0.5) * 20;
-            driftX = Math.max(-RADIUS, Math.min(RADIUS, driftX));
-            driftY = Math.max(-RADIUS, Math.min(RADIUS, driftY));
-            dx += driftX * 0.1;
-            dy += driftY * 0.1;
-        }
-
         knobX = centerX + dx;
         knobY = centerY + dy;
 
@@ -126,7 +116,7 @@ function createJoystick(canvasId, labelId, onMove, type) {
         let normX = Math.round((dx / RADIUS) * MAX_OUTPUT);
         let normY = Math.round((dy / RADIUS) * MAX_OUTPUT);
 
-        // Apply deadzone for analog (increased for worse performance)
+        // Apply deadzone for analog
         if (type === 'analog' && Math.abs(normX) < DEADZONE) normX = 0;
         if (type === 'analog' && Math.abs(normY) < DEADZONE) normY = 0;
 
@@ -239,17 +229,17 @@ document.getElementById('desktop-mode').addEventListener('click', () => {
     document.body.classList.remove('mobile-mode');
     document.getElementById('desktop-mode').classList.add('active');
     document.getElementById('mobile-mode').classList.remove('active');
-    WIDTH = 350; HEIGHT = 350; // Reset canvas size
+    WIDTH = 350; HEIGHT = 350;
 });
 
 document.getElementById('mobile-mode').addEventListener('click', () => {
     document.body.classList.add('mobile-mode');
     document.getElementById('mobile-mode').classList.add('active');
     document.getElementById('desktop-mode').classList.remove('active');
-    WIDTH = 300; HEIGHT = 300; // Smaller canvas for mobile
+    WIDTH = 300; HEIGHT = 300;
 });
 
-// Hall Joystick (1) - High noise + small drift during drag, no auto-movement
+// Hall Joystick (1) - Lower noise, no drift, no auto-movement
 const updateGraph1 = createGraph('graph-canvas1', [{
     label: 'Hall X',
     data: [],
@@ -286,7 +276,7 @@ createJoystick('joystick-canvas2', 'label-tmr', (normX, normY, type) => {
     updateGraph2([tmrX]);
 }, 'tmr');
 
-// Analog Joystick (3) - No noise + larger deadzone
+// Analog Joystick (3) - Added noise + deadzone
 const updateGraph3 = createGraph('graph-canvas3', [{
     label: 'Analog X',
     data: [],
@@ -294,15 +284,45 @@ const updateGraph3 = createGraph('graph-canvas3', [{
     fill: false
 }]);
 createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
-    document.getElementById('label-analog').textContent = `Analog: X=${normX}  Y=${normY}`;
-    analogData.push(normX);
+    const analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
+    document.getElementById('label-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
+    analogData.push(analogX);
     if (analogData.length > 100) analogData.shift();
     const avgNoise = calculateAvgNoise(analogData, normX);
     const accuracy = calculateAccuracy(avgNoise);
     document.getElementById('stats-analog').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
-    updateGraph3([normX]);
+    updateGraph3([analogX]);
 }, 'analog');
 
 // Comparison Joystick (4) - Controls all graphs
 const updateGraph4 = createGraph('graph-canvas4', [
-    { label: 'Hall X', data: [], borderColor: 'blue', fill
+    { label: 'Hall X', data: [], borderColor: 'blue', fill: false },
+    { label: 'TMR X', data: [], borderColor: 'green', fill: false },
+    { label: 'Analog X', data: [], borderColor: 'orange', fill: false }
+]);
+createJoystick('joystick-canvas4', null, (normX, normY, type) => {
+    const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
+    const jitter = Math.sin(Date.now() / 100) * 5;
+    const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
+    let analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
+    if (Math.abs(analogX) < DEADZONE) analogX = 0;
+
+    document.getElementById('label-comp-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
+    document.getElementById('label-comp-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
+    document.getElementById('label-comp-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
+
+    hallData.push(hallX);
+    tmrData.push(tmrX);
+    analogData.push(analogX);
+    [hallData, tmrData, analogData].forEach(arr => { if (arr.length > 100) arr.shift(); });
+
+    const hallAvg = calculateAvgNoise(hallData, normX);
+    const tmrAvg = calculateAvgNoise(tmrData, normX);
+    const analogAvg = calculateAvgNoise(analogData, normX);
+    document.getElementById('stats-comp').textContent = `Hall Noise: ${hallAvg} | TMR Noise: ${tmrAvg} | Analog Noise: ${analogAvg}`;
+
+    updateGraph4([hallX, tmrX, analogX]);
+    updateGraph1([hallX]);
+    updateGraph2([tmrX]);
+    updateGraph3([analogX]);
+}, 'comp');
