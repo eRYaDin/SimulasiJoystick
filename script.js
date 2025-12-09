@@ -3,10 +3,10 @@ let HEIGHT = 350;
 const RADIUS = 120;
 const KNOB_SIZE = 25;
 const MAX_OUTPUT = 1600;
-const HALL_NOISE = 50;   // Reduced for better performance
-const TMR_NOISE = 10;    // Lower for smoother
-const DEADZONE = 100;    // For analog
-const ANALOG_NOISE = 50; // Added noise to make analog worse
+const HALL_NOISE = 50;
+const TMR_NOISE = 10;
+const DEADZONE = 100;
+const ANALOG_NOISE = 50;
 
 let hallData = [];
 let tmrData = [];
@@ -21,7 +21,7 @@ function calculateAvgNoise(data, target) {
 
 // Function to calculate accuracy (inverse of noise, scaled)
 function calculateAccuracy(avgNoise) {
-    return Math.max(0, Math.round(100 - (avgNoise / 16)));  // Scale to 0-100
+    return Math.max(0, Math.round(100 - (avgNoise / 16)));
 }
 
 // Function to create joystick
@@ -33,7 +33,6 @@ function createJoystick(canvasId, labelId, onMove, type) {
     let knobX = centerX;
     let knobY = centerY;
     let isDragging = false;
-    // Removed driftX and driftY - Hall now behaves cleanly like others
 
     function drawOuterCircle() {
         ctx.beginPath();
@@ -144,7 +143,7 @@ function createJoystick(canvasId, labelId, onMove, type) {
     }
 }
 
-// Function to create graph with zoom (improved for better UX)
+// Function to create graph with zoom (line chart without points, thicker lines)
 function createGraph(canvasId, datasets) {
     const graphCanvas = document.getElementById(canvasId);
     const chart = new Chart(graphCanvas, {
@@ -158,7 +157,10 @@ function createGraph(canvasId, datasets) {
             maintainAspectRatio: false,
             elements: {
                 point: {
-                    radius: 2
+                    radius: 0  // No points/dots on the graph
+                },
+                line: {
+                    borderWidth: 2  // Thicker lines for better visibility
                 }
             },
             scales: {
@@ -244,7 +246,8 @@ const updateGraph1 = createGraph('graph-canvas1', [{
     label: 'Hall X',
     data: [],
     borderColor: 'blue',
-    fill: false
+    fill: false,
+    borderWidth: 2
 }]);
 createJoystick('joystick-canvas1', 'label-hall', (normX, normY, type) => {
     const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
@@ -262,7 +265,8 @@ const updateGraph2 = createGraph('graph-canvas2', [{
     label: 'TMR X',
     data: [],
     borderColor: 'green',
-    fill: false
+    fill: false,
+    borderWidth: 2
 }]);
 createJoystick('joystick-canvas2', 'label-tmr', (normX, normY, type) => {
     const jitter = Math.sin(Date.now() / 100) * 5;
@@ -281,7 +285,8 @@ const updateGraph3 = createGraph('graph-canvas3', [{
     label: 'Analog X',
     data: [],
     borderColor: 'orange',
-    fill: false
+    fill: false,
+    borderWidth: 2
 }]);
 createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
     const analogX = normX + Math.floor(Math.random() * (ANALOG_NOISE * 2 + 1)) - ANALOG_NOISE;
@@ -296,9 +301,9 @@ createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
 
 // Comparison Joystick (4) - Controls all graphs
 const updateGraph4 = createGraph('graph-canvas4', [
-    { label: 'Hall X', data: [], borderColor: 'blue', fill: false },
-    { label: 'TMR X', data: [], borderColor: 'green', fill: false },
-    { label: 'Analog X', data: [], borderColor: 'orange', fill: false }
+    { label: 'Hall X', data: [], borderColor: 'blue', fill: false, borderWidth: 2 },
+    { label: 'TMR X', data: [], borderColor: 'green', fill: false, borderWidth: 2 },
+    { label: 'Analog X', data: [], borderColor: 'orange', fill: false, borderWidth: 2 }
 ]);
 createJoystick('joystick-canvas4', null, (normX, normY, type) => {
     const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
