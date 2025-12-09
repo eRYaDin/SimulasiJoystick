@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4 Joysticks + Graphs Comparison - Enhanced Differences</title>
+    <title>Joystick Comparison Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
@@ -11,66 +11,101 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Joystick Comparison Tool</h1>
-    <div id="mode-toggle">
-        <button id="desktop-mode">Desktop Mode</button>
-        <button id="mobile-mode">Mobile Mode</button>
+    <!-- Menu Awal: Pemilihan Mode -->
+    <div id="start-menu">
+        <h1>Joystick Comparison Tool</h1>
+        <p>Pilih mode untuk memulai:</p>
+        <button id="desktop-mode-start">Desktop Mode</button>
+        <button id="mobile-mode-start">Mobile Mode</button>
     </div>
-    <div class="section">
-        <h3>Hall Joystick (High Noise + Drift)</h3>
-        <canvas id="joystick-canvas1" width="350" height="350"></canvas>
-        <div class="labels">
-            <div id="label-hall">Hall: X=0  Y=0</div>
+
+    <!-- Menu Utama: Joystick dan Mini Game Button -->
+    <div id="main-menu" style="display: none;">
+        <h1>Menu Utama</h1>
+        <button id="mini-game-btn">Mini Game</button>
+        <div class="section">
+            <h3>Hall Joystick (Lower Noise)</h3>
+            <canvas id="joystick-canvas1" width="350" height="350"></canvas>
+            <div class="labels">
+                <div id="label-hall">Hall: X=0  Y=0</div>
+            </div>
+            <div class="stats">
+                <div id="stats-hall">Avg Noise: 0 | Accuracy: 100%</div>
+            </div>
+            <div class="graph-container">
+                <canvas id="graph-canvas1"></canvas>
+            </div>
         </div>
-        <div class="stats">
-            <div id="stats-hall">Avg Noise: 0 | Accuracy: 100%</div>
+
+        <div class="section">
+            <h3>TMR Joystick (Low Noise + Jitter)</h3>
+            <canvas id="joystick-canvas2" width="350" height="350"></canvas>
+            <div class="labels">
+                <div id="label-tmr">TMR: X=0  Y=0</div>
+            </div>
+            <div class="stats">
+                <div id="stats-tmr">Avg Noise: 0 | Accuracy: 100%</div>
+            </div>
+            <div class="graph-container">
+                <canvas id="graph-canvas2"></canvas>
+            </div>
         </div>
-        <div class="graph-container">
-            <canvas id="graph-canvas1"></canvas>
+
+        <div class="section">
+            <h3>Analog Joystick (Noise + Deadzone)</h3>
+            <canvas id="joystick-canvas3" width="350" height="350"></canvas>
+            <div class="labels">
+                <div id="label-analog">Analog: X=0  Y=0</div>
+            </div>
+            <div class="stats">
+                <div id="stats-analog">Avg Noise: 0 | Accuracy: 100%</div>
+            </div>
+            <div class="graph-container">
+                <canvas id="graph-canvas3"></canvas>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Comparison Joystick (Controls All)</h3>
+            <canvas id="joystick-canvas4" width="350" height="350"></canvas>
+            <div class="labels">
+                <div id="label-comp-hall">Hall: X=0  Y=0</div>
+                <div id="label-comp-tmr">TMR: X=0  Y=0</div>
+                <div id="label-comp-analog">Analog: X=0  Y=0</div>
+            </div>
+            <div class="stats">
+                <div id="stats-comp">Hall Noise: 0 | TMR Noise: 0 | Analog Noise: 0</div>
+            </div>
+            <div class="graph-container">
+                <canvas id="graph-canvas4"></canvas>
+            </div>
         </div>
     </div>
 
-    <div class="section">
-        <h3>TMR Joystick (Low Noise + Jitter)</h3>
-        <canvas id="joystick-canvas2" width="350" height="350"></canvas>
-        <div class="labels">
-            <div id="label-tmr">TMR: X=0  Y=0</div>
-        </div>
-        <div class="stats">
-            <div id="stats-tmr">Avg Noise: 0 | Accuracy: 100%</div>
-        </div>
-        <div class="graph-container">
-            <canvas id="graph-canvas2"></canvas>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>Analog Joystick (No Noise + Deadzone)</h3>
-        <canvas id="joystick-canvas3" width="350" height="350"></canvas>
-        <div class="labels">
-            <div id="label-analog">Analog: X=0  Y=0</div>
-        </div>
-        <div class="stats">
-            <div id="stats-analog">Avg Noise: 0 | Accuracy: 100%</div>
-        </div>
-        <div class="graph-container">
-            <canvas id="graph-canvas3"></canvas>
-        </div>
-    </div>
-
-    <div class="section">
-        <h3>Comparison Joystick (Controls All)</h3>
-        <canvas id="joystick-canvas4" width="350" height="350"></canvas>
-        <div class="labels">
-            <div id="label-comp-hall">Hall: X=0  Y=0</div>
-            <div id="label-comp-tmr">TMR: X=0  Y=0</div>
-            <div id="label-comp-analog">Analog: X=0  Y=0</div>
-        </div>
-        <div class="stats">
-            <div id="stats-comp">Hall Noise: 0 | TMR Noise: 0 | Analog Noise: 0</div>
-        </div>
-        <div class="graph-container">
-            <canvas id="graph-canvas4"></canvas>
+    <!-- Mini Game: Simulasi Menggerakkan Mobil untuk Mengumpulkan Koin -->
+    <div id="mini-game" style="display: none;">
+        <h1>Mini Game: Kumpulkan Koin</h1>
+        <p>Gunakan joystick kecil di bawah untuk menggerakkan mobil dan kumpulkan koin. Lihat perbedaan noise/deadzone!</p>
+        <button id="back-to-main">Kembali ke Menu Utama</button>
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+        <div id="game-stats">Score: 0 | Koin: 0</div>
+        <div class="mini-joysticks">
+            <div class="mini-section">
+                <h4>Hall</h4>
+                <canvas id="mini-joystick1" width="150" height="150"></canvas>
+            </div>
+            <div class="mini-section">
+                <h4>TMR</h4>
+                <canvas id="mini-joystick2" width="150" height="150"></canvas>
+            </div>
+            <div class="mini-section">
+                <h4>Analog</h4>
+                <canvas id="mini-joystick3" width="150" height="150"></canvas>
+            </div>
+            <div class="mini-section">
+                <h4>Comparison</h4>
+                <canvas id="mini-joystick4" width="150" height="150"></canvas>
+            </div>
         </div>
     </div>
 
