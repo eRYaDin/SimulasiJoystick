@@ -1,278 +1,322 @@
-// Constants
-const DICE_FACES = {1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
-const SYMBOLS = ["🍒", "🍋", "🍇", "💎", "🍀", "🔔"];
-const COINS = ["Kepala", "Ekor"];
-const COLORS = ["Merah", "Hitam", "Hijau"];
+const WIDTH = 350;
+const HEIGHT = 350;
+const RADIUS = 120;
+const KNOB_SIZE = 25;
+const MAX_OUTPUT = 1600;
+const HALL_NOISE = 100;  // Increased for more difference
+const TMR_NOISE = 10;    // Lower for smoother
+const DEADZONE = 50;     // For analog
 
-// Global Variables (Tidak ada penyimpanan data, hanya untuk percobaan)
-let playerEmail = "";
-let playerCredit = 100;
-let playerTotalPoints = 0;
+let hallData = [];
+let tmrData = [];
+let analogData = [];
 
-// Utility Functions
-function showPage(pageId) {
-    document.querySelectorAll('.container > div').forEach(div => div.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
+// Function to calculate average noise
+function calculateAvgNoise(data, target) {
+    if (data.length === 0) return 0;
+    const deviations = data.map(val => Math.abs(val - target));
+    return Math.round(deviations.reduce((a, b) => a + b, 0) / deviations.length);
 }
 
-function updateStatus() {
-    document.getElementById('status').textContent = `👤 Email: ${playerEmail} | 💰 Kredit: ${playerCredit} | ⭐ Total Poin: ${playerTotalPoints}`;
+// Function to calculate accuracy (inverse of noise, scaled)
+function calculateAccuracy(avgNoise) {
+    return Math.max(0, Math.round(100 - (avgNoise / 16)));  // Scale to 0-100
 }
 
-function signInWithGoogle() {
-    // Simulasi sign-in Google (langsung ke menu dengan email dummy)
-    playerEmail = "user@gmail.com"; // Dummy email untuk percobaan
-    playerCredit = 100;
-    playerTotalPoints = 0;
-    showPage('menu-page');
-    updateStatus();
-}
+// Function to create joystick
+function createJoystick(canvasId, labelId, onMove, type) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const centerX = WIDTH / 2;
+    const centerY = HEIGHT / 2;
+    let knobX = centerX;
+    let knobY = centerY;
+    let isDragging = false;
+    let driftX = 0;
+    let driftY = 0;
 
-function signInWithEmail() {
-    showPage('account-page');
-}
-
-function createAccount() {
-    playerEmail = document.getElementById('player-email').value.trim();
-    if (!playerEmail) {
-        document.getElementById('account-info').textContent = "❗Masukkan email yang valid.";
-        return;
+    function drawOuterCircle() {
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, RADIUS, 0, 2 * Math.PI);
+        ctx.strokeStyle = 'black';
+        ctx.lineWidth = 2;
+        ctx.stroke();
     }
-    playerCredit = 100; // modal awal
-    playerTotalPoints = 0;
-    showPage('menu-page');
-    updateStatus();
-}
 
-function followIG() {
-    window.open('https://www.instagram.com/ajk_rafif_yasin/', '_blank');
-    playerCredit += 50;
-    playerTotalPoints += 50;
-    updateStatus();
-    alert("Terima kasih telah follow! +50 kredit telah ditambahkan (Beta).");
-}
+    function drawKnob() {
+        ctx.beginPath();
+        ctx.arc(knobX, knobY, KNOB_SIZE, 0, 2 * Math.PI);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
 
-function logout() {
-    playerEmail = "";
-    playerCredit = 100;
-    playerTotalPoints = 0;
-    showPage('signin-page');
-}
+    function redraw() {
+        ctx.clearRect(0, 0, WIDTH, HEIGHT);
+        drawOuterCircle();
+        drawKnob();
+    }
 
-function backToMenu() {
-    showPage('menu-page');
-}
+    redraw();
 
-function openGame(game) {
-    showPage(`${game}-page`);
-}
+    // Drift for Hall
+    if (type === 'hall') {
+        setInterval(() => {
+            if (!isDragging) {
+                driftX += (Math.random() - 0.5) * 10;
+                driftY += (Math.random() - 0.5) * 10;
+                driftX = Math.max(-RADIUS, Math.min(RADIUS, driftX));
+                driftY = Math.max(-RADIUS, Math.min(RADIUS, driftY));
+                knobX = centerX + driftX;
+                knobY = centerY + driftY;
+                redraw();
+                const normX = Math.round((driftX / RADIUS) * MAX_OUTPUT);
+                const normY = Math.round((driftY / RADIUS) * MAX_OUTPUT);
+                const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
+                document.getElementById(labelId).textContent = `Hall: X=${hallX}  Y=${normY}`;
+                hallData.push(hallX);
+                if (hallData.length > 100) hallData.shift();
+                const avgNoise = calculateAvgNoise(hallData, normX);
+                const accuracy = calculateAccuracy(avgNoise);
+                document.getElementById('stats-hall').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
+                updateGraph1([hallX]);
+            }
+        }, 500);  // Drift every 500ms
+    }
 
-// Dice Game
-function animateDice(callback) {
-    let start = Date.now();
-    let interval = setInterval(() => {
-        if (Date.now() - start > 700) {
-            clearInterval(interval);
-            callback();
+    canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        moveKnob(e);
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            moveKnob(e);
+        }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+        isDragging = false;
+        smoothCenter();
+    });
+
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        moveKnob(e.touches[0]);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (isDragging) {
+            moveKnob(e.touches[0]);
+        }
+    });
+
+    canvas.addEventListener('touchend', () => {
+        isDragging = false;
+        smoothCenter();
+    });
+
+    function moveKnob(e) {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        let dx = mouseX - centerX;
+        let dy = mouseY - centerY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > RADIUS) {
+            const scale = RADIUS / dist;
+            dx *= scale;
+            dy *= scale;
+        }
+
+        knobX = centerX + dx;
+        knobY = centerY + dy;
+
+        redraw();
+
+        let normX = Math.round((dx / RADIUS) * MAX_OUTPUT);
+        let normY = Math.round((dy / RADIUS) * MAX_OUTPUT);
+
+        // Apply deadzone for analog
+        if (type === 'analog' && Math.abs(normX) < DEADZONE) normX = 0;
+        if (type === 'analog' && Math.abs(normY) < DEADZONE) normY = 0;
+
+        onMove(normX, normY, type);
+    }
+
+    function smoothCenter() {
+        if (isDragging) return;
+
+        const dx = centerX - knobX;
+        const dy = centerY - knobY;
+
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1) {
+            knobX = centerX;
+            knobY = centerY;
+            redraw();
             return;
         }
-        document.getElementById('dice-display').textContent = DICE_FACES[Math.floor(Math.random() * 6) + 1];
-    }, 80);
+
+        knobX += dx * 0.2;
+        knobY += dy * 0.2;
+
+        redraw();
+        setTimeout(smoothCenter, 10);
+    }
 }
 
-function startDice() {
-    let rounds = parseInt(document.getElementById('rounds').value) || 5;
-    rounds = Math.max(5, Math.min(rounds, 10));
-    let cost = 3 * rounds;
-    if (playerCredit < cost) {
-        document.getElementById('dice-output').textContent = "❌ Kredit tidak cukup untuk bermain!\n";
-        return;
-    }
-    playerCredit -= cost;
-    updateStatus();
-    let output = document.getElementById('dice-output');
-    output.textContent = `🎲 Memulai ${rounds} ronde...\nBiaya: ${cost} kredit\n\n`;
-    let totalScore = 0;
-    let prevNumber = null;
-    let streak = 1;
-    let round = 0;
-
-    function nextRound() {
-        if (round >= rounds) {
-            output.textContent += `\n🏁 Total skor sesi ini: ${totalScore}\n`;
-            playerTotalPoints += totalScore;
-            playerCredit += totalScore;
-            updateStatus();
-            document.getElementById('dice-display').textContent = "🎲";
-            return;
+// Function to create graph with zoom
+function createGraph(canvasId, datasets) {
+    const graphCanvas = document.getElementById(canvasId);
+    const chart = new Chart(graphCanvas, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            elements: {
+                point: {
+                    radius: 0  // No points on the line
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    position: 'bottom'
+                },
+                y: {
+                    min: -1600,
+                    max: 1600
+                }
+            },
+            plugins: {
+                zoom: {
+                    zoom: {
+                        wheel: {
+                            enabled: true,
+                        },
+                        pinch: {
+                            enabled: true
+                        },
+                        mode: 'xy',
+                    },
+                    pan: {
+                        enabled: true,
+                        mode: 'xy',
+                    },
+                }
+            }
         }
-        round++;
-        output.textContent += `🌀 Ronde ke-${round}\n`;
-        animateDice(() => {
-            let number = Math.floor(Math.random() * 6) + 1;
-            document.getElementById('dice-display').textContent = DICE_FACES[number];
-            output.textContent += `Lemparan: ${number}\n`;
-            if (number === prevNumber) {
-                streak++;
-            } else {
-                streak = 1;
-            }
-            if (streak === 2) {
-                output.innerHTML += `<span class="bonus">🔥 Dapat angka ${number} dua kali berturut-turut!\n   ➕ Tambah ${number * 2} poin!\n</span>`;
-                totalScore += number * 2;
-                animateDice(() => {
-                    let bonus = Math.floor(Math.random() * 6) + 1;
-                    document.getElementById('dice-display').textContent = DICE_FACES[bonus];
-                    output.innerHTML += `<span class="bonus">🎁 Bonus: ${bonus}\n</span>`;
-                    totalScore += bonus;
-                    prevNumber = number;
-                    setTimeout(nextRound, 400);
-                });
-            } else if (streak > 2) {
-                output.innerHTML += `<span class="bonus">🔥 ${streak} kali berturut-turut angka ${number}! Skor dikali ${streak}!\n</span>`;
-                totalScore += number * streak;
-                prevNumber = number;
-                setTimeout(nextRound, 400);
-            } else {
-                output.innerHTML += `<span class="normal">   ➕ Tambah ${number} poin.\n</span>`;
-                totalScore += number;
-                prevNumber = number;
-                setTimeout(nextRound, 400);
-            }
+    });
+
+    let timeStep = 0;
+    const maxDataPoints = 200;
+
+    return function updateGraph(values) {
+        timeStep++;
+        chart.data.labels.push(timeStep);
+        datasets.forEach((dataset, index) => {
+            dataset.data.push(values[index]);
         });
-    }
-    nextRound();
+
+        if (chart.data.labels.length > maxDataPoints) {
+            chart.data.labels.shift();
+            datasets.forEach(dataset => dataset.data.shift());
+        }
+
+        chart.update();
+    };
 }
 
-// Slot Game
-function animateSlot(callback) {
-    let start = Date.now();
-    let interval = setInterval(() => {
-        if (Date.now() - start > 1200) {
-            clearInterval(interval);
-            callback();
-            return;
-        }
-        document.getElementById('slot1').textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        document.getElementById('slot2').textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-        document.getElementById('slot3').textContent = SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
-    }, 100);
-}
+// Hall Joystick (1) - High noise + drift
+const updateGraph1 = createGraph('graph-canvas1', [{
+    label: 'Hall X',
+    data: [],
+    borderColor: 'blue',
+    fill: false
+}]);
+createJoystick('joystick-canvas1', 'label-hall', (normX, normY, type) => {
+    const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
+    document.getElementById('label-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
+    hallData.push(hallX);
+    if (hallData.length > 100) hallData.shift();
+    const avgNoise = calculateAvgNoise(hallData, normX);
+    const accuracy = calculateAccuracy(avgNoise);
+    document.getElementById('stats-hall').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
+    updateGraph1([hallX]);
+}, 'hall');
 
-function spinSlot() {
-    let cost = 20;
-    if (playerCredit < cost) {
-        document.getElementById('slot-output').textContent = "❌ Kredit tidak cukup untuk memutar slot!\n";
-        return;
-    }
-    playerCredit -= cost;
-    updateStatus();
-    let output = document.getElementById('slot-output');
-    output.textContent = `🎰 Memutar mesin slot (Biaya: ${cost})...\n\n`;
-    animateSlot(() => {
-        let results = [SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)], SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)], SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]];
-        document.getElementById('slot1').textContent = results[0];
-        document.getElementById('slot2').textContent = results[1];
-        document.getElementById('slot3').textContent = results[2];
-        let unique = new Set(results).size;
-        let score;
-        if (unique === 1) {
-            score = 150;
-            output.innerHTML += `<span class="bonus">💎 JACKPOT! ${results.join(' ')} → +${score} poin!\n</span>`;
-        } else if (unique === 2) {
-            score = 50;
-            output.innerHTML += `<span class="bonus">✨ Dua simbol sama! ${results.join(' ')} → +${score} poin.\n</span>`;
-        } else {
-            score = 10;
-            output.innerHTML += `<span class="normal">🙂 Tidak cocok semua. ${results.join(' ')} → +${score} poin.\n</span>`;
-        }
-        playerTotalPoints += score;
-        playerCredit += score;
-        updateStatus();
-    });
-}
+// TMR Joystick (2) - Low noise + jitter
+const updateGraph2 = createGraph('graph-canvas2', [{
+    label: 'TMR X',
+    data: [],
+    borderColor: 'green',
+    fill: false
+}]);
+createJoystick('joystick-canvas2', 'label-tmr', (normX, normY, type) => {
+    const jitter = Math.sin(Date.now() / 100) * 5;  // Small jitter
+    const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
+    document.getElementById('label-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
+    tmrData.push(tmrX);
+    if (tmrData.length > 100) tmrData.shift();
+    const avgNoise = calculateAvgNoise(tmrData, normX);
+    const accuracy = calculateAccuracy(avgNoise);
+    document.getElementById('stats-tmr').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
+    updateGraph2([tmrX]);
+}, 'tmr');
 
-// Coin Game
-function flipCoin() {
-    let choice = document.querySelector('input[name="coin-choice"]:checked').value;
-    let bet = parseInt(document.getElementById('coin-bet').value) || 0;
-    let output = document.getElementById('coin-output');
-    output.textContent = "";
-    if (bet <= 0) {
-        output.textContent = "❗Masukkan jumlah taruhan yang valid.\n";
-        return;
-    }
-    if (playerCredit < bet) {
-        output.textContent = "❌ Kredit tidak cukup!\n";
-        return;
-    }
-    playerCredit -= bet;
-    updateStatus();
-    output.textContent = "🪙 Melempar koin...\n";
-    setTimeout(() => {
-        let result = COINS[Math.floor(Math.random() * COINS.length)];
-        output.textContent += `🎯 Hasil lemparan: ${result}\n`;
-        if (result === choice) {
-            let win = bet * 2;
-            playerCredit += win;
-            playerTotalPoints += win;
-            output.innerHTML += `<span class="bonus">✅ Tebakan benar! +${win} poin!\n</span>`;
-        } else {
-            output.innerHTML += `<span class="normal">❌ Tebakan salah. Taruhan hilang ${bet} poin.\n</span>`;
-        }
-        updateStatus();
-    }, 1000);
-}
+// Analog Joystick (3) - No noise + deadzone
+const updateGraph3 = createGraph('graph-canvas3', [{
+    label: 'Analog X',
+    data: [],
+    borderColor: 'orange',
+    fill: false
+}]);
+createJoystick('joystick-canvas3', 'label-analog', (normX, normY, type) => {
+    document.getElementById('label-analog').textContent = `Analog: X=${normX}  Y=${normY}`;
+    analogData.push(normX);
+    if (analogData.length > 100) analogData.shift();
+    const avgNoise = calculateAvgNoise(analogData, normX);
+    const accuracy = calculateAccuracy(avgNoise);
+    document.getElementById('stats-analog').textContent = `Avg Noise: ${avgNoise} | Accuracy: ${accuracy}%`;
+    updateGraph3([normX]);
+}, 'analog');
 
-// Roulette Game
-function animateRoulette(callback) {
-    let start = Date.now();
-    let interval = setInterval(() => {
-        if (Date.now() - start > 2000) {
-            clearInterval(interval);
-            callback();
-            return;
-        }
-        let num = Math.floor(Math.random() * 37);
-        let color = num === 0 ? "Hijau" : num % 2 === 0 ? "Merah" : "Hitam";
-        document.getElementById('roulette-display').textContent = `${num} (${color})`;
-    }, 50);
-}
+// Comparison Joystick (4) - Controls all graphs
+const updateGraph4 = createGraph('graph-canvas4', [
+    { label: 'Hall X', data: [], borderColor: 'blue', fill: false },
+    { label: 'TMR X', data: [], borderColor: 'green', fill: false },
+    { label: 'Analog X', data: [], borderColor: 'orange', fill: false }
+]);
+createJoystick('joystick-canvas4', null, (normX, normY, type) => {
+    const hallX = normX + Math.floor(Math.random() * (HALL_NOISE * 2 + 1)) - HALL_NOISE;
+    const jitter = Math.sin(Date.now() / 100) * 5;
+    const tmrX = normX + Math.floor(Math.random() * (TMR_NOISE * 2 + 1)) - TMR_NOISE + jitter;
+    let analogX = normX;
+    if (Math.abs(analogX) < DEADZONE) analogX = 0;
 
-function spinRoulette() {
-    let colorChoice = document.querySelector('input[name="color-choice"]:checked').value;
-    let numberGuess = document.getElementById('number-guess').value;
-    let bet = parseInt(document.getElementById('roulette-bet').value) || 0;
-    let output = document.getElementById('roulette-output');
-    output.textContent = "";
-    if (bet <= 0) {
-        output.textContent = "❗Masukkan taruhan yang valid.\n";
-        return;
-    }
-    if (playerCredit < bet) {
-        output.textContent = "❌ Kredit tidak cukup!\n";
-        return;
-    }
-    playerCredit -= bet;
-    updateStatus();
-    output.textContent = "🎯 Memutar roda roulette...\n";
-    animateRoulette(() => {
-        let resultNum = Math.floor(Math.random() * 37);
-        let resultColor = resultNum === 0 ? "Hijau" : resultNum % 2 === 0 ? "Merah" : "Hitam";
-        document.getElementById('roulette-display').textContent = `${resultNum} (${resultColor})`;
-        output.textContent += `🎡 Hasil: ${resultNum} (${resultColor})\n`;
-        let win = 0;
-        if (numberGuess && parseInt(numberGuess) === resultNum) {
-            win = bet * 35;
-            output.innerHTML += `<span class="bonus">💰 Angka cocok! +${win} poin!\n</span>`;
-        } else if (colorChoice === resultColor) {
-            win = bet * 2;
-            output.innerHTML += `<span class="bonus">💎 Warna cocok! +${win} poin!\n</span>`;
-        } else {
-            output.innerHTML += `<span class="normal">❌ Kalah! Hilang ${bet} poin.\n</span>`;
-        }
-        playerCredit += win;
-        playerTotalPoints += win;
-        updateStatus();
-    });
-}
+    document.getElementById('label-comp-hall').textContent = `Hall: X=${hallX}  Y=${normY}`;
+    document.getElementById('label-comp-tmr').textContent = `TMR: X=${Math.round(tmrX)}  Y=${normY}`;
+    document.getElementById('label-comp-analog').textContent = `Analog: X=${analogX}  Y=${normY}`;
+
+    hallData.push(hallX);
+    tmrData.push(tmrX);
+    analogData.push(analogX);
+    [hallData, tmrData, analogData].forEach(arr => { if (arr.length > 100) arr.shift(); });
+
+    const hallAvg = calculateAvgNoise(hallData, normX);
+    const tmrAvg = calculateAvgNoise(tmrData, normX);
+    const analogAvg = calculateAvgNoise(analogData, normX);
+    document.getElementById('stats-comp').textContent = `Hall Noise: ${hallAvg} | TMR Noise: ${tmrAvg} | Analog Noise: ${analogAvg}`;
+
+    updateGraph4([hallX, tmrX, analogX]);
+    updateGraph1([hallX]);
+    updateGraph2([tmrX]);
+    updateGraph3([analogX]);
+}, 'comp');
