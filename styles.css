@@ -1,0 +1,160 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+.container {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    width: 90%;
+    max-width: 900px;
+    height: 90%;
+    max-height: 620px;
+    overflow-y: auto;
+}
+h1, h2 {
+    text-align: center;
+    color: #333;
+}
+.status {
+    text-align: center;
+    margin: 10px 0;
+    font-weight: bold;
+}
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+button:hover {
+    opacity: 0.8;
+}
+.game-button {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+}
+.bonus-button {
+    background-color: #FF5722;
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+}
+.logout-button {
+    background-color: #F44336;
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+}
+input, select {
+    padding: 5px;
+    margin: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+}
+.output {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    height: 200px;
+    overflow-y: auto;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    white-space: pre-wrap;
+}
+.bonus {
+    color: blue;
+    font-weight: bold;
+}
+.normal {
+    color: black;
+}
+.dice, .slot, .coin, .roulette {
+    text-align: center;
+    font-size: 60px;
+    margin: 20px 0;
+}
+.slot-symbols {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+.slot-symbol {
+    font-size: 60px;
+    margin: 0 10px;
+}
+.radio-group {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+.radio-group label {
+    margin: 0 10px;
+}
+.hidden {
+    display: none;
+}
+/* Sign-In Page Styles (Mirip Google) */
+.signin-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.signin-header h1 {
+    font-size: 36px;
+    margin-bottom: 10px;
+}
+.signin-form {
+    text-align: center;
+}
+.google-signin {
+    background-color: #4285F4;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    margin: 10px 0;
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.google-signin:hover {
+    background-color: #3367D6;
+}
+.email-signin {
+    background-color: #34A853;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-size: 16px;
+    margin: 10px 0;
+    display: block;
+    width: 100%;
+    max-width: 300px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.email-signin:hover {
+    background-color: #2E7D32;
+}
+.signin-form p {
+    margin: 20px 0;
+    font-size: 14px;
+    color: #666;
+}
