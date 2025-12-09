@@ -1,100 +1,48 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🎮 Arcade Mini: Dadu, Slot, Koin & Roulette (Beta)</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="container" id="app">
-        <!-- Sign-In Page (Mirip Google) -->
-        <div id="signin-page">
-            <div class="signin-header">
-                <h1>🎮 Arcade Mini (Beta)</h1>
-                <p>Sign in to continue</p>
-            </div>
-            <div class="signin-form">
-                <button class="google-signin" onclick="signInWithGoogle()">Sign in with Google</button>
-                <p>Or</p>
-                <button class="email-signin" onclick="signInWithEmail()">Sign in with Email</button>
-            </div>
-        </div>
-
-        <!-- Account Creation Page -->
-        <div id="account-page" class="hidden">
-            <h1>🧍 Buat Akun Baru (Percobaan)</h1>
-            <input type="email" id="player-email" placeholder="Masukkan email" />
-            <p id="account-info">Masukkan email untuk memulai percobaan.</p>
-            <button onclick="createAccount()">Mulai Bermain</button>
-        </div>
-
-        <!-- Main Menu -->
-        <div id="menu-page" class="hidden">
-            <h1>🎮 Arcade Mini Center (Beta)</h1>
-            <div class="status" id="status">👤 Email: | 💰 Kredit: 100 | ⭐ Total Poin: 0</div>
-            <button class="game-button" onclick="openGame('dadu')">🎲 Game Dadu</button>
-            <button class="game-button" onclick="openGame('slot')">🎰 Slot Arcade</button>
-            <button class="game-button" onclick="openGame('koin')">🪙 Tebak Koin</button>
-            <button class="game-button" onclick="openGame('roulette')">🎯 Roulette Mini</button>
-            <button class="bonus-button" onclick="followIG()">Follow IG @ajk_rafif_yasin (+50 Kredit)</button>
-            <button class="logout-button" onclick="logout()">Keluar Akun</button>
-        </div>
-
-        <!-- Dadu Game Page -->
-        <div id="dadu-page" class="hidden">
-            <h2>🎲 Game Dadu Bonus Dinamis</h2>
-            <div class="dice" id="dice-display">🎲</div>
-            <label>Jumlah ronde (5-10): <input type="number" id="rounds" min="5" max="10" value="5" /></label>
-            <button onclick="startDice()">Mulai Lempar Dadu</button>
-            <button onclick="backToMenu()">⬅️ Kembali ke Menu</button>
-            <div class="output" id="dice-output"></div>
-        </div>
-
-        <!-- Slot Game Page -->
-        <div id="slot-page" class="hidden">
-            <h2>🎰 Slot Arcade</h2>
-            <div class="slot-symbols">
-                <div class="slot-symbol" id="slot1">❔</div>
-                <div class="slot-symbol" id="slot2">❔</div>
-                <div class="slot-symbol" id="slot3">❔</div>
-            </div>
-            <button onclick="spinSlot()">Putar Slot</button>
-            <button onclick="backToMenu()">⬅️ Kembali ke Menu</button>
-            <div class="output" id="slot-output"></div>
-        </div>
-
-        <!-- Koin Game Page -->
-        <div id="koin-page" class="hidden">
-            <h2>🪙 Game Tebak Koin</h2>
-            <div class="radio-group">
-                <label><input type="radio" name="coin-choice" value="Kepala" checked /> Kepala</label>
-                <label><input type="radio" name="coin-choice" value="Ekor" /> Ekor</label>
-            </div>
-            <label>Taruhan: <input type="number" id="coin-bet" value="10" /></label>
-            <button onclick="flipCoin()">Lempar Koin</button>
-            <button onclick="backToMenu()">⬅️ Kembali ke Menu</button>
-            <div class="output" id="coin-output"></div>
-        </div>
-
-        <!-- Roulette Game Page -->
-        <div id="roulette-page" class="hidden">
-            <h2>🎯 Roulette Mini</h2>
-            <div class="radio-group">
-                <label>Warna:</label>
-                <label><input type="radio" name="color-choice" value="Merah" checked /> Merah</label>
-                <label><input type="radio" name="color-choice" value="Hitam" /> Hitam</label>
-                <label><input type="radio" name="color-choice" value="Hijau" /> Hijau</label>
-            </div>
-            <label>Tebak Angka (0–36): <input type="number" id="number-guess" min="0" max="36" /></label>
-            <label>Taruhan: <input type="number" id="roulette-bet" value="10" /></label>
-            <button onclick="spinRoulette()">Putar Roulette</button>
-            <button onclick="backToMenu()">⬅️ Kembali ke Menu</button>
-            <div class="roulette" id="roulette-display">🎡</div>
-            <div class="output" id="roulette-output"></div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
+body {
+    font-family: Arial, sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    padding: 10px;
+    margin: 0;
+}
+.section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 10px;
+    width: calc(50% - 20px);
+    min-width: 300px;
+}
+@media (max-width: 768px) {
+    .section {
+        width: 100%;
+    }
+}
+#joystick-canvas1, #joystick-canvas2, #joystick-canvas3, #joystick-canvas4 {
+    border: 1px solid black;
+    background-color: white;
+    margin-bottom: 10px;
+    max-width: 100%;
+    height: auto;
+}
+.labels {
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 14px;
+}
+.stats {
+    margin-bottom: 10px;
+    text-align: center;
+    font-size: 12px;
+    color: gray;
+}
+.graph-container {
+    width: 100%;
+    max-width: 400px;
+    height: 300px;
+}
+canvas {
+    max-width: 100%;
+    height: auto;
+}
